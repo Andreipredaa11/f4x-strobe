@@ -324,38 +324,43 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         assert(P.PATTERNS.filter((p) => p.kind === 'strobe').every((p) => P.funcsOf(p).every((n) => L.FUNCS[n])), 'every strobe names a known function');
     });
     S.pattern = 'hb_strobe'; S.speed = '1';
-    const hb = await run(800);
-    check('high beam strobe: one timed high beam request a flash (70 ms), nothing else switched, nothing held', () => {
+    const hb = await run(1200);
+    check('high beam strobe: one timed high beam request a flash (250 ms by default), nothing else switched, nothing held', () => {
         const w = hb.filter((x) => !/^(10 0[13]|3E 00|22 E3 B9)$/.test(x));
-        assert(w.length >= 3 && w.every((x) => x === '2E D5 42 00 05 00 07'), hb.join(' | '));
+        assert(w.length >= 2 && w.every((x) => x === '2E D5 42 00 05 00 19'), hb.join(' | '));
         assert(!hb.some((x) => /^2F /.test(x)) && app.link.held.size === 0 && hb[hb.length - 1] === '10 01');
     });
     S.speed = '0.5';
     const hbSlow = await run(500);
-    check('speed setting: half speed, flashes twice as long', () => assert(hbSlow.includes('2E D5 42 00 05 00 0E'), hbSlow.join(' | ')));
-    S.speed = '1';
+    check('speed setting: half speed, flashes twice as long', () => assert(hbSlow.includes('2E D5 42 00 05 00 32'), hbSlow.join(' | ')));
+    S.speed = '1'; S.flashMs = '600';
+    const hbLong = await run(900);
+    check('flash length setting: 600 ms flashes', () => assert(hbLong.includes('2E D5 42 00 05 00 3C') && !hbLong.includes('2E D5 42 00 05 00 19'), hbLong.join(' | ')));
+    S.flashMs = '250';
 
     // the lamp check: identification first (reads only), then each light function once
-    bdc.refuseFn = new Set([0x10, 0x11]);                 // no parking light functions on this car
+    bdc.refuseFn = new Set([0x0E]);                       // no rear fog light function on this car
     sent.length = 0;
     saved = await lampCheck();
-    check('lamp check: body controller identified, light functions tried, parking lights found missing; never low beam, fog or cornering', () => {
+    check('lamp check: body controller identified, light functions tried, rear fog found missing; never low beam, parking, fog or cornering', () => {
         assert(saved._car && saved._car.gen === 'g05' && saved._car.fn === true && saved._car.ids['40'] === '004001', JSON.stringify(saved._car));
-        assert(saved._funcs.high === 'ok' && saved._funcs.parkL === 'out of range' && saved._funcs.parkR === 'out of range' && !('cornL' in saved._funcs) && !('fog' in saved._funcs), JSON.stringify(saved._funcs));
-        assert(!sent.some((x) => x[0] === 0x40 && /^2E D5 42 00 0[3489A] /.test(hexs(x.slice(1)))), 'no low beam, daytime, fog or cornering function');
+        assert(saved._funcs.high === 'ok' && saved._funcs.rearFog === 'out of range' && Object.keys(saved._funcs).sort().join() === 'high,indL,indR,rearFog,reverse', JSON.stringify(saved._funcs));
+        assert(!sent.some((x) => x[0] === 0x40 && /^2E D5 42 00 (0[3489A]|1[01]) /.test(hexs(x.slice(1)))), 'no low beam, daytime, parking, fog or cornering function');
         const first = sent.map((x) => hexs(x.slice(1)));
         assert(first.indexOf('22 F1 50') < first.indexOf('2E D5 42 00 05 00 3C'), 'identified before the first flash');
     });
     S.pattern = 'police';
-    const pol = await run(900);
-    check('police: high beam flashes, then both sides\' turn signals; nothing else', () => {
-        assert(pol.includes('2E D5 42 00 05 00 07') && pol.includes('2E D5 42 00 06 00 0A') && pol.includes('2E D5 42 00 07 00 0A'), pol.join(' | '));
-        assert(pol.filter((x) => /^2E /.test(x)).every((x) => /^2E D5 42 00 0[567] /.test(x)), pol.join(' | '));
+    const pol = await run(3500);
+    check('police: front only the high beams, back the reversing lights (rear fog refused here: left out); nothing else', () => {
+        const fl = pol.filter((x) => /^2E /.test(x));
+        assert(fl.includes('2E D5 42 00 05 00 19') && fl.includes('2E D5 42 00 0F 00 19'), pol.join(' | '));
+        assert(fl.every((x) => /^2E D5 42 00 (05|0F) 00 19$/.test(x)), pol.join(' | '));
+        assert(fl.indexOf('2E D5 42 00 0F 00 19') > fl.indexOf('2E D5 42 00 05 00 19'), 'front first, then back');
     });
     S.pattern = 'every';
     const ev = await run(2500);
-    check('every light in turn: the parking lights (refused in the check) left out', () => {
-        assert(ev.some((x) => /^2E D5 42 00 0F /.test(x)) && !ev.some((x) => /^2E D5 42 00 1[01] /.test(x)), ev.join(' | '));
+    check('every light in turn: the rear fog (refused in the check) left out', () => {
+        assert(ev.some((x) => /^2E D5 42 00 0F /.test(x)) && !ev.some((x) => /^2E D5 42 00 0E /.test(x)), ev.join(' | '));
     });
     await loops.MAIN();
     check('pages draw with the car and function results', () => assert(!warns.some((w) => /TypeError|ReferenceError|is not a function/.test(w)), warns.join(' | ')));
@@ -530,7 +535,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     check('the whole run: nothing ever written to the headlight modules, no low beam, daytime, fog or cornering function', () => {
         const hl = everSent.filter((x) => (x[0] === 0x43 || x[0] === 0x44) && hexs(x.slice(1)) !== '22 F1 50');
         assert(!hl.length, hl.map((x) => hexs(x)).slice(0, 5).join(' | '));
-        assert(!everSent.some((x) => x[0] === 0x40 && /^2E D5 42 00 0[3489A] /.test(hexs(x.slice(1)))));
+        assert(!everSent.some((x) => x[0] === 0x40 && /^2E D5 42 00 (0[3489A]|1[01]) /.test(hexs(x.slice(1)))));
         assert(!everSent.some((x) => x[0] === 0x40 && /^2F (E3 B5|45 01) 03 0[1-4B-C] 01/.test(hexs(x.slice(1)))), 'no low beam, daytime or front fog output switched on');
     });
     console.log(passed + ' checks passed');

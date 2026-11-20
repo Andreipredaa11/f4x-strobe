@@ -100,7 +100,7 @@ const BDC_FLASH = { special: 0x1C, reversing: 0x1B };
 
 /** The light functions the strobe patterns flash (TAB_LAMPEN_FUNKTION, the same numbers in BDC, BDC_G11 and
  *  BDC_G05). lamps: the dots they light on the page's car drawing. Never flashed: low beam (0x03), daytime light
- *  (0x04), front fog (0x08 - this car has none), cornering lights (0x09 / 0x0A - adaptive headlights), brake light
+ *  (0x04), parking lights (0x10 / 0x11: from the headlights only the high beam is ever used), front fog (0x08 - this car has none), cornering lights (0x09 / 0x0A - adaptive headlights), brake light
  *  and emergency stop signal: check() refuses them. */
 const FUNCS = {
     high: { code: 0x05, name: 'High beam', lamps: ['highL', 'highR'] },
@@ -108,8 +108,6 @@ const FUNCS = {
     indR: { code: 0x07, name: 'Turn signals right', lamps: ['indFR', 'indSR', 'indRR'] },
     rearFog: { code: 0x0E, name: 'Rear fog light', lamps: ['rfogL', 'rfogR'] },
     reverse: { code: 0x0F, name: 'Reversing lights', lamps: ['revL', 'revR'] },
-    parkL: { code: 0x10, name: 'Parking light left', lamps: ['drlL'] },
-    parkR: { code: 0x11, name: 'Parking light right', lamps: ['drlR'] },
 };
 
 /** The body controller output request's layouts tried, in order (after 2F E3 B5; E output, A 01 on / 00 off). */

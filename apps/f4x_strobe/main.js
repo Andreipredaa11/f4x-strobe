@@ -106,7 +106,7 @@ mgu.run({
         /* ---------- the player ---------- */
         let lit = new Set(), frameAt = -1, startedAt = 0, stopWhy = '';
         const player = new Player(link, {
-            log, usable, fnUsable, dark: darkAtStart, needsLayout: () => LAMPS.some((l) => link.how[l.id] !== 'flm' && usable(l.id) && !(checked[l.id] && checked[l.id].ok === false)), viaFn: (id) => !!(checked[id] && checked[id].ok === false && sideFn(id)),
+            log, usable, fnUsable, flashMs: () => settings.get('flashMs'), dark: darkAtStart, needsLayout: () => LAMPS.some((l) => link.how[l.id] !== 'flm' && usable(l.id) && !(checked[l.id] && checked[l.id].ok === false)), viaFn: (id) => !!(checked[id] && checked[id].ok === false && sideFn(id)),
             onFrame: (l, i) => { lit = new Set(l); frameAt = i; },
             fnRefused: (n, nrc) => {
                 checked._funcs = checked._funcs || {};
@@ -367,7 +367,7 @@ mgu.run({
                     : lampsOf(p).filter((id) => !usable(id)).map((id) => BY_ID[id].name);
                 const carInfo = checked._car;
                 const lines = [
-                    'Speed x' + speedK() + '   ·   parked only (' + (speed === null ? 'speed not known yet' : Math.round(speed) + ' km/h') + ')   ·   '
+                    'Speed x' + speedK() + '   ·   flash ' + (Number(settings.get('flashMs')) || 250) + ' ms   ·   parked only (' + (speed === null ? 'speed not known yet' : Math.round(speed) + ' km/h') + ')   ·   '
                         + 'stops after ' + (Number(settings.get('autoStop')) || 5) + ' min'
                         + (run ? '   ·   running ' + Math.round((Date.now() - startedAt) / 1000) + ' s' + (player.late ? ', link too slow ' + player.late + 'x' : '') : ''),
                     missing.length ? 'Left out (refused in the lamp check): ' + missing.join(', ') : Object.keys(checked).length ? 'Every lamp of this pattern passed the lamp check' : 'Lamp check not run yet: see the Lamp check page',

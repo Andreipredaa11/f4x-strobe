@@ -15,27 +15,28 @@
 const { BY_ID, FLM_FLASH, BDC_FLASH, FUNCS } = require('./lamps');
 
 const f = (ms, ...on) => ({ ms, on });
-/** a strobe frame: these light functions, each lit for len ms, the frame lasting ms */
-const s = (ms, len, ...fn) => ({ ms, len, fn, on: [] });
-const x = (ms) => ({ ms, len: 0, fn: [], on: [] });
+/** a strobe frame: these light functions, each lit for the flash length (setting Flash length), then dark for gap
+ *  ms before the next frame */
+const s = (gap, ...fn) => ({ gap, fn, on: [] });
+/** a pause of ms (nothing lit) */
+const x = (ms) => ({ ms, fn: [], on: [] });
 const PATTERNS = [
-    { id: 'hb_strobe', name: 'High beam strobe', kind: 'strobe', what: 'The high beams, as fast as the car takes it',
-        frames: [s(120, 70, 'high')] },
+    { id: 'police', name: 'Police', kind: 'strobe', what: 'Front: three high beam flashes. Back: three flashes of the reversing and rear fog lights',
+        frames: [s(150, 'high'), s(150, 'high'), s(150, 'high'), x(200), s(150, 'reverse', 'rearFog'), s(150, 'reverse', 'rearFog'), s(150, 'reverse', 'rearFog'), x(200)] },
+    { id: 'hb_strobe', name: 'High beam strobe', kind: 'strobe', what: 'The high beams, flash after flash',
+        frames: [s(200, 'high')] },
     { id: 'hb_triple', name: 'Triple flash', kind: 'strobe', what: 'Three high beam flashes, then a pause',
-        frames: [s(120, 70, 'high'), s(120, 70, 'high'), s(120, 70, 'high'), x(700)] },
-    { id: 'police', name: 'Police', kind: 'strobe', what: 'Three high beam flashes, then the turn signals twice',
-        frames: [s(110, 70, 'high'), s(110, 70, 'high'), s(110, 70, 'high'), x(120), s(150, 100, 'indL', 'indR'), s(150, 100, 'indL', 'indR'), x(150)] },
+        frames: [s(150, 'high'), s(150, 'high'), s(150, 'high'), x(700)] },
+    { id: 'front_back', name: 'Front and back', kind: 'strobe', what: 'High beams, then the reversing and rear fog lights',
+        frames: [s(200, 'high'), s(200, 'reverse', 'rearFog')] },
     { id: 'hb_ind', name: 'High beam / turn signals', kind: 'strobe', what: 'High beams and all turn signals in turn',
-        frames: [s(200, 120, 'high'), s(200, 120, 'indL', 'indR')] },
+        frames: [s(200, 'high'), s(200, 'indL', 'indR')] },
     { id: 'ind_wigwag', name: 'Indicator wig-wag', kind: 'strobe', what: 'All turn signals of a side: two flashes left, two right',
-        frames: [s(150, 100, 'indL'), s(150, 100, 'indL'), x(150), s(150, 100, 'indR'), s(150, 100, 'indR'), x(150)] },
-    { id: 'front_back', name: 'Front and back', kind: 'strobe', what: 'High beams, then rear fog and reversing lights',
-        frames: [s(200, 120, 'high'), s(200, 120, 'rearFog', 'reverse')] },
+        frames: [s(150, 'indL'), s(150, 'indL'), x(150), s(150, 'indR'), s(150, 'indR'), x(150)] },
     { id: 'rear_strobe', name: 'Rear strobe', kind: 'strobe', what: 'Rear fog light and reversing lights in turn',
-        frames: [s(160, 100, 'rearFog'), s(160, 100, 'reverse')] },
+        frames: [s(150, 'rearFog'), s(150, 'reverse')] },
     { id: 'every', name: 'Every light in turn', kind: 'strobe', what: 'Each light function once, round the car',
-        frames: [s(300, 250, 'high'), s(300, 250, 'parkL'), s(300, 250, 'indL'), s(300, 250, 'reverse'), s(300, 250, 'rearFog'),
-            s(300, 250, 'indR'), s(300, 250, 'parkR'), x(400)] },
+        frames: [s(150, 'high'), s(150, 'indL'), s(150, 'reverse'), s(150, 'rearFog'), s(150, 'indR'), x(400)] },
     { id: 'wigwag', name: 'Wig-wag', kind: 'emergency', what: 'High beams, left and right in turn',
         frames: [f(350, 'highL'), f(350, 'highR')] },
     { id: 'double', name: 'Double flash', kind: 'emergency', what: 'Two quick flashes left, then two right',
@@ -145,14 +146,16 @@ class Player {
                     if (!this.running) break;
                     const name = this._fnName(p, want);
                     if (!name) continue;
-                    const r = await this.link.flash(name, fr.len / this.speed);
+                    const r = await this.link.flash(name, this._flashMs() / this.speed);
                     if (r.ok) FUNCS[name].lamps.forEach((id) => lit.add(id));
                     else if (r.nrc !== null && this.opts.fnRefused) this.opts.fnRefused(name, r.nrc);
                 }
                 this.lit = lit;
                 if (this.opts.onFrame) this.opts.onFrame(this.lit, i % p.frames.length);
                 this.frames++;
-                const left = f0 + fr.ms / this.speed - this.now();
+                // a flash frame: lit for the flash length, then its gap; a pause: its own time
+                const dur = fr.fn.length ? this._flashMs() + fr.gap : fr.ms;
+                const left = f0 + dur / this.speed - this.now();
                 if (left > 0) await this.wait(left); else if (fr.fn.length) this.late++;
                 i++;
                 continue;
@@ -208,6 +211,8 @@ class Player {
         }
     }
     _fn(id) { return !!(this.opts.viaFn && this.opts.viaFn(id)); }
+    /** how long a strobe flash is lit (ms): the Flash length setting, 250 when not given */
+    _flashMs() { const v = this.opts.flashMs ? Number(this.opts.flashMs()) : 0; return v > 0 ? v : 250; }
     /** the light function a strobe frame flashes for want: itself, its fallback, or null (neither works) */
     _fnName(p, want) {
         const ok = (n) => FUNCS[n] && (!this.opts.fnUsable || this.opts.fnUsable(n));

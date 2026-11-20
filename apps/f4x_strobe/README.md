@@ -16,8 +16,8 @@ wig-wags on a public road is illegal in most countries, and they can be mistaken
 
 ## Never touched
 
-This car has **adaptive headlights** and **no front fog lights**, so the app never switches the low beams, daytime
-lights, cornering lights or front fogs. It never writes anything to the headlight modules (0x43 / 0x44), where the
+This car has **adaptive headlights** and **no front fog lights**, so from the headlights the app only ever uses the
+high beams: never the low beams, daytime or parking lights, cornering lights or front fogs. It never writes anything to the headlight modules (0x43 / 0x44), where the
 headlight motors are: no session, no light function, no lamp test, only an identification read. `check()` refuses
 all of these before they can be sent, and the tests check every request of a full run.
 
@@ -29,14 +29,17 @@ the head unit stops.
 
 | Pattern | What it does |
 |---|---|
-| High beam strobe | High beams, as fast as the car takes requests |
+| Police (default) | Front: three high beam flashes. Back: three flashes of the reversing and rear fog lights |
+| High beam strobe | High beams, flash after flash |
 | Triple flash | Three high beam flashes, then a pause |
-| Police | Three high beam flashes, then all turn signals twice |
+| Front and back | High beams, then reversing and rear fog lights |
 | High beam / turn signals | High beams and all turn signals in turn |
 | Indicator wig-wag | A whole side's turn signals: two left, two right |
-| Front and back | High beams, then rear fog and reversing lights |
 | Rear strobe | Rear fog and reversing lights in turn |
 | Every light in turn | Each light function once, round the car |
+
+**Flash length** (setting): how long each flash stays lit, 0.15 to 0.6 s, 0.25 s by default. Longer gives more
+light per flash.
 
 Light Show's original patterns (wig-wag, chase, sweep and the others) are still there. They switch individual lamp
 outputs and only work where the Lamp check finds that the body controller accepts them.
@@ -65,7 +68,7 @@ The results are saved and shown on the Strobe page (`Car: ...`) and the Lamp che
 |---|---|---|
 | Body controller 0x40 | `10 03`, `10 01`, `3E 00` | Extended session, tester present every 2 s, default session at stop |
 | | `22 F150`, `22 D542`, `22 E3B9`, `22 4500` | Identification, light functions, lamp output status (reads) |
-| | `2E D542 00 <fn> <time, 10 ms>` | Light function for a time (max 5 s): high beam, turn signals, rear fog, reversing, parking lights only |
+| | `2E D542 00 <fn> <time, 10 ms>` | Light function for a time (max 5 s): high beam, turn signals, rear fog, reversing lights only |
 | | `2F E3B5 ...` or `2F 4501 ...` | One lamp output on / off / back to the car (BDC_G05 or older BDC). Never low beam, daytime, front fog, brake, tail or plate lights on/off |
 | Headlight modules 0x43 / 0x44 | `22 F150` | Identification read only. Nothing is ever written |
 
