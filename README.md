@@ -3,8 +3,9 @@
 > offers to the MGU Store (`mgu-repo.json` excludes the others). See [its README](apps/f4x_strobe/README.md).
 > Not yet tested on an F40 / F44.
 >
-> **Full Cluster Map** (`apps/f4x_full_cluster`): the Waze map over the whole instrument cluster with its own speed
-> and engine speed. Needs Waze on cluster with the Full cluster mode. See [its README](apps/f4x_full_cluster/README.md).
+> **Bigger Waze Map** (`apps/f4x_map_size`): the Waze map larger on the cluster, out to the stock speedometer and
+> rev counter. Needs Waze on cluster with panel support. See [its README](apps/f4x_map_size/README.md).
+> (`apps/f4x_full_cluster`, the map over the whole cluster with its own readouts, is kept but not offered.)
 
 > [!WARNING]
 > **Disclaimer.** This fork is an independent personal project by eroobeeroo, separate from the original project

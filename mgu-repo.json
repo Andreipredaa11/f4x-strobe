@@ -22,7 +22,8 @@
     },
     "exclude": [
       "cluster_info",
-      "edrive2"
+      "edrive2",
+      "f4x_full_cluster"
     ]
   }
 }

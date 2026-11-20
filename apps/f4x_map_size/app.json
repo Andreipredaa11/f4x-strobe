@@ -1,0 +1,157 @@
+{
+  "id": "f4x_map_size",
+  "title": "Bigger Waze Map",
+  "version": "0.1.0",
+  "startType": "autostart",
+  "vendor": "custom",
+  "loggingId": "OF4W",
+  "iconGlyph": "gauge",
+  "description": "The Waze map on the instrument cluster larger, out to the stock speedometer and rev counter, which stay as they are. Needs Waze on cluster with panel support (the map window).",
+  "signals": {
+    "de.bmw.infrastructure.VehicleCondition": {
+      "VehicleCondition": "s"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "canvas",
+      "title": "Bigger Waze Map",
+      "buttons": [
+        [
+          "BTN_WIDER",
+          "Wider"
+        ],
+        [
+          "BTN_NARROWER",
+          "Narrower"
+        ],
+        [
+          "BTN_TALLER",
+          "Taller"
+        ],
+        [
+          "BTN_SHORTER",
+          "Shorter"
+        ],
+        [
+          "BTN_SETTINGS",
+          "Settings"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "enabled",
+      "label": "Bigger map",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "width",
+      "label": "Width (px)",
+      "type": "number",
+      "unit": "px",
+      "default": 1280,
+      "steps": [
+        1088,
+        1120,
+        1200,
+        1280,
+        1360,
+        1440,
+        1520,
+        1600,
+        1680,
+        1760,
+        1840,
+        1920
+      ]
+    },
+    {
+      "key": "height",
+      "label": "Height (px)",
+      "type": "number",
+      "unit": "px",
+      "default": 560,
+      "steps": [
+        480,
+        520,
+        560,
+        600,
+        640,
+        680,
+        720
+      ]
+    },
+    {
+      "key": "offsetY",
+      "label": "Move down (px, minus: up)",
+      "type": "number",
+      "unit": "px",
+      "default": 0,
+      "steps": [
+        -120,
+        -100,
+        -80,
+        -60,
+        -40,
+        -20,
+        0,
+        20,
+        40,
+        60,
+        80,
+        100,
+        120
+      ]
+    },
+    {
+      "key": "reset",
+      "label": "Reset the size",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme",
+      "type": "choice",
+      "default": "m_tricolour",
+      "options": [
+        [
+          "m_red",
+          "M Red"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
+        ],
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "amber",
+          "Night Amber"
+        ]
+      ]
+    },
+    {
+      "key": "renderer",
+      "label": "Renderer",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "GPU 60 fps (default)"
+        ],
+        [
+          "software",
+          "Software"
+        ]
+      ]
+    }
+  ]
+}
