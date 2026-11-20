@@ -1,0 +1,265 @@
+{
+  "id": "f4x_strobe",
+  "title": "F4x Strobe",
+  "description": "BimmerLink-style strobes for the F40 / F44 (iDrive 7): the high beams, fogs, turn signals and rear lights flashed through the body controller's own light functions, each flash ending by itself. Parked only. A fork of Light Show by eroobeeroo (PolyForm Noncommercial 1.0.0).",
+  "version": "0.1.0",
+  "vendor": "custom",
+  "loggingId": "OF4X",
+  "iconGlyph": "lights",
+  "signals": {
+    "de.bmw.infrastructure.VehicleCondition": {
+      "VehicleCondition": "s"
+    },
+    "com.harman.infotainment.systemfunctions.tasu.tasu.InternalTasu": {
+      "_instances": "SystemFunctionsInternalTasuInst1",
+      "_methods": [
+        "sendTasuRequest"
+      ],
+      "_broadcasts": [
+        "sendTasuResponse"
+      ]
+    },
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "canvas",
+      "title": "F4x Strobe",
+      "buttons": [
+        [
+          "BTN_RUN",
+          "Start / stop"
+        ],
+        [
+          "BTN_PATTERN",
+          "Next pattern"
+        ],
+        [
+          "BTN_PAGE",
+          "Next page"
+        ],
+        [
+          "BTN_BACK",
+          "Give lamps back"
+        ],
+        [
+          "BTN_SETTINGS",
+          "Settings"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "pattern",
+      "label": "Pattern",
+      "type": "choice",
+      "default": "hb_strobe",
+      "options": [
+        [
+          "hb_strobe",
+          "High beam strobe"
+        ],
+        [
+          "hb_triple",
+          "Triple flash"
+        ],
+        [
+          "police",
+          "Police"
+        ],
+        [
+          "hb_fog",
+          "High beam / fogs"
+        ],
+        [
+          "ind_wigwag",
+          "Indicator wig-wag"
+        ],
+        [
+          "front_back",
+          "Front and back"
+        ],
+        [
+          "rear_strobe",
+          "Rear strobe"
+        ],
+        [
+          "every",
+          "Every light in turn"
+        ],
+        [
+          "wigwag",
+          "Wig-wag"
+        ],
+        [
+          "wigwag_fog",
+          "Wig-wag + fogs"
+        ],
+        [
+          "double",
+          "Double flash"
+        ],
+        [
+          "full",
+          "Front and rear"
+        ],
+        [
+          "rear",
+          "Rear only"
+        ],
+        [
+          "corners",
+          "Corner strobe"
+        ],
+        [
+          "chase",
+          "Chase (show)"
+        ],
+        [
+          "sweep",
+          "Sweep (show)"
+        ],
+        [
+          "all",
+          "Everything (show)"
+        ],
+        [
+          "strobe",
+          "Strobe (show)"
+        ],
+        [
+          "sides",
+          "Side to side (turn signals)"
+        ],
+        [
+          "revsides",
+          "Reverse side to side (show)"
+        ],
+        [
+          "blink",
+          "Blink (show)"
+        ],
+        [
+          "hstrobe",
+          "Headlight strobe (show)"
+        ],
+        [
+          "revflash",
+          "Reverse flash (show)"
+        ]
+      ]
+    },
+    {
+      "key": "speed",
+      "label": "Speed",
+      "type": "choice",
+      "default": "1",
+      "options": [
+        [
+          "0.5",
+          "Half"
+        ],
+        [
+          "0.75",
+          "Slower"
+        ],
+        [
+          "1",
+          "Normal"
+        ],
+        [
+          "1.5",
+          "Faster"
+        ],
+        [
+          "2",
+          "Double"
+        ]
+      ]
+    },
+    {
+      "key": "autoStop",
+      "label": "Stop by itself after",
+      "type": "choice",
+      "default": "5",
+      "options": [
+        [
+          "1",
+          "1 minute"
+        ],
+        [
+          "5",
+          "5 minutes"
+        ],
+        [
+          "15",
+          "15 minutes"
+        ],
+        [
+          "30",
+          "30 minutes"
+        ]
+      ]
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme",
+      "type": "choice",
+      "default": "m_tricolour",
+      "options": [
+        [
+          "m_red",
+          "M Red"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
+        ],
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "amber",
+          "Night Amber"
+        ]
+      ]
+    },
+    {
+      "key": "layout",
+      "label": "Screen layout",
+      "type": "choice",
+      "default": "full",
+      "options": [
+        [
+          "full",
+          "Full screen"
+        ],
+        [
+          "standard",
+          "Standard"
+        ]
+      ]
+    },
+    {
+      "key": "renderer",
+      "label": "Renderer",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "GPU 60 fps (default)"
+        ],
+        [
+          "software",
+          "Software"
+        ]
+      ]
+    }
+  ]
+}
