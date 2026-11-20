@@ -2,6 +2,9 @@
 > for the F40 / F44 through the body controller's light functions, parked only. It's the only app this repository
 > offers to the MGU Store (`mgu-repo.json` excludes the others). See [its README](apps/f4x_strobe/README.md).
 > Not yet tested on an F40 / F44.
+>
+> **Full Cluster Map** (`apps/f4x_full_cluster`): the Waze map over the whole instrument cluster with its own speed
+> and engine speed. Needs Waze on cluster with the Full cluster mode. See [its README](apps/f4x_full_cluster/README.md).
 
 > [!WARNING]
 > **Disclaimer.** This fork is an independent personal project by eroobeeroo, separate from the original project

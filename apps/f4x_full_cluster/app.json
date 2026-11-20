@@ -1,0 +1,122 @@
+{
+  "id": "f4x_full_cluster",
+  "title": "Full Cluster Map",
+  "version": "0.1.0",
+  "startType": "autostart",
+  "vendor": "custom",
+  "loggingId": "OF4M",
+  "iconGlyph": "gauge",
+  "description": "The Waze map over the whole instrument cluster, with the speed and engine speed drawn over it. Needs Waze on cluster with its Full cluster mode. The stock gauges come back by themselves when this app stops or has no speed from the car.",
+  "signals": {
+    "de.bmw.infrastructure.VehicleCondition": {
+      "VehicleCondition": "s"
+    },
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    },
+    "de.bmw.infotainment.vehicle.CDS": {
+      "statusEngineSpeed2": "rs"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "canvas",
+      "title": "Full Cluster Map",
+      "buttons": [
+        [
+          "BTN_TOGGLE",
+          "On / off"
+        ],
+        [
+          "BTN_SETTINGS",
+          "Settings"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "enabled",
+      "label": "Map over the whole cluster",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "units",
+      "label": "Speed in",
+      "type": "choice",
+      "default": "kmh",
+      "options": [
+        [
+          "kmh",
+          "km/h"
+        ],
+        [
+          "mph",
+          "mph"
+        ]
+      ]
+    },
+    {
+      "key": "rpmMax",
+      "label": "Engine speed scale up to",
+      "type": "choice",
+      "default": "7000",
+      "options": [
+        [
+          "6000",
+          "6000 rpm"
+        ],
+        [
+          "7000",
+          "7000 rpm"
+        ],
+        [
+          "8000",
+          "8000 rpm"
+        ]
+      ]
+    },
+    {
+      "key": "theme",
+      "label": "Colour theme",
+      "type": "choice",
+      "default": "m_tricolour",
+      "options": [
+        [
+          "m_red",
+          "M Red"
+        ],
+        [
+          "m_tricolour",
+          "M Tricolour"
+        ],
+        [
+          "ice",
+          "Ice White"
+        ],
+        [
+          "amber",
+          "Night Amber"
+        ]
+      ]
+    },
+    {
+      "key": "renderer",
+      "label": "Renderer",
+      "type": "choice",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "GPU 60 fps (default)"
+        ],
+        [
+          "software",
+          "Software"
+        ]
+      ]
+    }
+  ]
+}
