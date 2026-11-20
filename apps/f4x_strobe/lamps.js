@@ -45,22 +45,19 @@ const IDENT_DID = [0xF1, 0x50];           // SGBD index: tells the unit's varian
 const MAX_FN_MS = 5000;                   // the longest a light function is ever asked for (it ends by itself)
 const TP_MS = 2000;                       // tester present (the session ends after ~5 s without)
 
-/** The lamps. out: body controller output; flm: { ecu, lv } its headlight module's light function; side: which
+/** The lamps. out: body controller output (headlight modules are never written here); side: which
  *  side; usual: what the lamp normally is while driving at night ('on' / 'brake': the emergency patterns never take
  *  it over). */
 // (high beam: Fernlicht Modus 1a - on a G05 Fernlichtblinken 0x45 was taken and nothing lit; 1a, 2a and 3a lit)
 const HIGH = 0x0F, LOW = 0x05, DRL = 0x33, BLINK = 0x49;     // Fernlicht 1a, Abblendlicht LV5, Tagfahrlicht, Blinken
 const LAMPS = [
-    { id: 'lowL', out: 0x01, flm: { ecu: FLM_L, lv: LOW }, name: 'Low beam left', end: 'front', side: 'L', usual: 'on' },
-    { id: 'lowR', out: 0x02, flm: { ecu: FLM_R, lv: LOW }, name: 'Low beam right', end: 'front', side: 'R', usual: 'on' },
-    { id: 'highL', out: 0x07, flm: { ecu: FLM_L, lv: HIGH }, name: 'High beam left', end: 'front', side: 'L' },
-    { id: 'highR', out: 0x08, flm: { ecu: FLM_R, lv: HIGH }, name: 'High beam right', end: 'front', side: 'R' },
-    { id: 'drlL', out: 0x03, flm: { ecu: FLM_L, lv: DRL }, name: 'Daytime light left', end: 'front', side: 'L', usual: 'on' },
-    { id: 'drlR', out: 0x04, flm: { ecu: FLM_R, lv: DRL }, name: 'Daytime light right', end: 'front', side: 'R', usual: 'on' },
-    { id: 'fogL', out: 0x0B, name: 'Fog light left', end: 'front', side: 'L' },
-    { id: 'fogR', out: 0x0C, name: 'Fog light right', end: 'front', side: 'R' },
-    { id: 'indFL', out: 0x0D, flm: { ecu: FLM_L, lv: BLINK }, name: 'Turn signal front left', end: 'front', side: 'L' },
-    { id: 'indFR', out: 0x0E, flm: { ecu: FLM_R, lv: BLINK }, name: 'Turn signal front right', end: 'front', side: 'R' },
+    // (no low beams: adaptive headlights - never touched; no front fog lights on this car)
+    { id: 'highL', out: 0x07, name: 'High beam left', end: 'front', side: 'L' },
+    { id: 'highR', out: 0x08, name: 'High beam right', end: 'front', side: 'R' },
+    { id: 'drlL', out: 0x03, name: 'Daytime light left', end: 'front', side: 'L', usual: 'on' },
+    { id: 'drlR', out: 0x04, name: 'Daytime light right', end: 'front', side: 'R', usual: 'on' },
+    { id: 'indFL', out: 0x0D, name: 'Turn signal front left', end: 'front', side: 'L' },
+    { id: 'indFR', out: 0x0E, name: 'Turn signal front right', end: 'front', side: 'R' },
     // (outDark: seen on a G05, the body controller takes the request and nothing lights - the mirrors' repeaters
     // aren't on its outputs: only the left / right turn signal function reaches them)
     { id: 'indSL', out: 0x10, outDark: true, name: 'Side repeater left', end: 'side', side: 'L' },
@@ -94,7 +91,7 @@ const FLM_FLASH = { panic: 0x48, alarm: 0x47, holdup: 0x46 };   // Panik-Modus, 
 const LVS = [HIGH, LOW, DRL, BLINK].concat(HIGH_TRIES, Object.values(FLM_FLASH));
 
 /** Lamp functions (TAB_LEUCHTEN_FUNKTION_ARG) for 0xD542. */
-const FN = { lowL: 0x03, lowR: 0x03, highL: 0x05, highR: 0x05, drlL: 0x04, drlR: 0x04, fogL: 0x08, fogR: 0x08,
+const FN = { highL: 0x05, highR: 0x05,
     indFL: 0x06, indSL: 0x06, indRL: 0x06, indFR: 0x07, indSR: 0x07, indRR: 0x07,
     rfogL: 0x0E, rfogR: 0x0E, revL: 0x0F, revR: 0x0F };
 
@@ -102,15 +99,13 @@ const FN = { lowL: 0x03, lowR: 0x03, highL: 0x05, highR: 0x05, drlL: 0x04, drlR:
 const BDC_FLASH = { special: 0x1C, reversing: 0x1B };
 
 /** The light functions the strobe patterns flash (TAB_LAMPEN_FUNKTION, the same numbers in BDC, BDC_G11 and
- *  BDC_G05). lamps: the dots they light on the page's car drawing. Brake light and emergency stop signal are left
- *  out: never flashed. */
+ *  BDC_G05). lamps: the dots they light on the page's car drawing. Never flashed: low beam (0x03), daytime light
+ *  (0x04), front fog (0x08 - this car has none), cornering lights (0x09 / 0x0A - adaptive headlights), brake light
+ *  and emergency stop signal: check() refuses them. */
 const FUNCS = {
     high: { code: 0x05, name: 'High beam', lamps: ['highL', 'highR'] },
     indL: { code: 0x06, name: 'Turn signals left', lamps: ['indFL', 'indSL', 'indRL'] },
     indR: { code: 0x07, name: 'Turn signals right', lamps: ['indFR', 'indSR', 'indRR'] },
-    fog: { code: 0x08, name: 'Front fog lights', lamps: ['fogL', 'fogR'] },
-    cornL: { code: 0x09, name: 'Cornering light left', lamps: ['lowL'] },
-    cornR: { code: 0x0A, name: 'Cornering light right', lamps: ['lowR'] },
     rearFog: { code: 0x0E, name: 'Rear fog light', lamps: ['rfogL', 'rfogR'] },
     reverse: { code: 0x0F, name: 'Reversing lights', lamps: ['revL', 'revR'] },
     parkL: { code: 0x10, name: 'Parking light left', lamps: ['drlL'] },
@@ -167,10 +162,10 @@ function check(target, bytes) {
     const bad = () => new Error('light show: request not allowed: ' + hex(target) + ': ' + bytes.map(hex).join(' '));
     if ([BDC, FLM_L, FLM_R].indexOf(target) < 0) throw new Error('light show: only the body controller and the headlight modules');
     const [sid, a] = bytes, key = bytes.map(hex).join(' ');
-    if (sid === 0x10 && bytes.length === 2 && (a === 0x01 || a === 0x03)) return;
-    if (sid === 0x3E && bytes.length === 2 && a === 0x00) return;
-    if (key === '22 F1 50') return;
     if (target === BDC) {
+        if (sid === 0x10 && bytes.length === 2 && (a === 0x01 || a === 0x03)) return;
+        if (sid === 0x3E && bytes.length === 2 && a === 0x00) return;
+        if (key === '22 F1 50') return;
         if (key === '22 E3 B9' || key === '22 45 00' || key === '22 D5 42') return;
         const outs = LAMPS.map((l) => l.out), all = outs.concat(KEPT.map((l) => l.out));
         // an output request: a layout's shape (E a lamp output, A on / off / 0x40, T any time byte, the rest as is),
@@ -190,7 +185,8 @@ function check(target, bytes) {
             && ((bytes[5] << 8) | bytes[6]) * 10 <= MAX_FN_MS) return;
         throw bad();
     }
-    if (sid === 0x2E && bytes.length === 6 && bytes[1] === LV_DID[0] && bytes[2] === LV_DID[1] && bytes[3] === 0x00 && LVS.indexOf(bytes[4]) >= 0 && bytes[5] <= 2) return;
+    // the headlight modules (adaptive headlights, with their motors): read only, never written, no session
+    if (key === '22 F1 50') return;
     throw bad();
 }
 

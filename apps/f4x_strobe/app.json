@@ -1,8 +1,8 @@
 {
   "id": "f4x_strobe",
   "title": "F4x Strobe",
-  "description": "BimmerLink-style strobes for the F40 / F44 (iDrive 7): the high beams, fogs, turn signals and rear lights flashed through the body controller's own light functions, each flash ending by itself. Parked only. A fork of Light Show by eroobeeroo (PolyForm Noncommercial 1.0.0).",
-  "version": "0.1.0",
+  "description": "BimmerLink-style strobes for the F40 / F44 (iDrive 7): the high beams, turn signals and rear lights flashed through the body controller's own light functions, each flash ending by itself. Parked only. A fork of Light Show by eroobeeroo (PolyForm Noncommercial 1.0.0).",
+  "version": "0.2.0",
   "vendor": "custom",
   "loggingId": "OF4X",
   "iconGlyph": "lights",
@@ -72,8 +72,8 @@
           "Police"
         ],
         [
-          "hb_fog",
-          "High beam / fogs"
+          "hb_ind",
+          "High beam / turn signals"
         ],
         [
           "ind_wigwag",
@@ -94,10 +94,6 @@
         [
           "wigwag",
           "Wig-wag"
-        ],
-        [
-          "wigwag_fog",
-          "Wig-wag + fogs"
         ],
         [
           "double",
@@ -142,10 +138,6 @@
         [
           "blink",
           "Blink (show)"
-        ],
-        [
-          "hstrobe",
-          "Headlight strobe (show)"
         ],
         [
           "revflash",

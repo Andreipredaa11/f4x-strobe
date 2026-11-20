@@ -23,11 +23,10 @@ const PATTERNS = [
         frames: [s(120, 70, 'high')] },
     { id: 'hb_triple', name: 'Triple flash', kind: 'strobe', what: 'Three high beam flashes, then a pause',
         frames: [s(120, 70, 'high'), s(120, 70, 'high'), s(120, 70, 'high'), x(700)] },
-    { id: 'police', name: 'Police', kind: 'strobe', what: 'Cornering lights: three flashes left, three right (high beam where a car has none)',
-        frames: [s(110, 70, 'cornL'), s(110, 70, 'cornL'), s(110, 70, 'cornL'), x(120), s(110, 70, 'cornR'), s(110, 70, 'cornR'), s(110, 70, 'cornR'), x(120)],
-        fallback: { cornL: 'high', cornR: 'high' } },
-    { id: 'hb_fog', name: 'High beam / fogs', kind: 'strobe', what: 'High beams and front fog lights in turn',
-        frames: [s(200, 120, 'high'), s(200, 120, 'fog')] },
+    { id: 'police', name: 'Police', kind: 'strobe', what: 'Three high beam flashes, then the turn signals twice',
+        frames: [s(110, 70, 'high'), s(110, 70, 'high'), s(110, 70, 'high'), x(120), s(150, 100, 'indL', 'indR'), s(150, 100, 'indL', 'indR'), x(150)] },
+    { id: 'hb_ind', name: 'High beam / turn signals', kind: 'strobe', what: 'High beams and all turn signals in turn',
+        frames: [s(200, 120, 'high'), s(200, 120, 'indL', 'indR')] },
     { id: 'ind_wigwag', name: 'Indicator wig-wag', kind: 'strobe', what: 'All turn signals of a side: two flashes left, two right',
         frames: [s(150, 100, 'indL'), s(150, 100, 'indL'), x(150), s(150, 100, 'indR'), s(150, 100, 'indR'), x(150)] },
     { id: 'front_back', name: 'Front and back', kind: 'strobe', what: 'High beams, then rear fog and reversing lights',
@@ -35,12 +34,10 @@ const PATTERNS = [
     { id: 'rear_strobe', name: 'Rear strobe', kind: 'strobe', what: 'Rear fog light and reversing lights in turn',
         frames: [s(160, 100, 'rearFog'), s(160, 100, 'reverse')] },
     { id: 'every', name: 'Every light in turn', kind: 'strobe', what: 'Each light function once, round the car',
-        frames: [s(300, 250, 'high'), s(300, 250, 'cornL'), s(300, 250, 'parkL'), s(300, 250, 'indL'), s(300, 250, 'fog'),
-            s(300, 250, 'reverse'), s(300, 250, 'rearFog'), s(300, 250, 'indR'), s(300, 250, 'parkR'), s(300, 250, 'cornR'), x(400)] },
+        frames: [s(300, 250, 'high'), s(300, 250, 'parkL'), s(300, 250, 'indL'), s(300, 250, 'reverse'), s(300, 250, 'rearFog'),
+            s(300, 250, 'indR'), s(300, 250, 'parkR'), x(400)] },
     { id: 'wigwag', name: 'Wig-wag', kind: 'emergency', what: 'High beams, left and right in turn',
         frames: [f(350, 'highL'), f(350, 'highR')] },
-    { id: 'wigwag_fog', name: 'Wig-wag + fogs', kind: 'emergency', what: 'High beams in turn, each with the opposite fog light',
-        frames: [f(350, 'highL', 'fogR'), f(350, 'highR', 'fogL')] },
     { id: 'double', name: 'Double flash', kind: 'emergency', what: 'Two quick flashes left, then two right',
         frames: [f(90, 'highL'), f(70), f(90, 'highL'), f(160), f(90, 'highR'), f(70), f(90, 'highR'), f(160)] },
     { id: 'full', name: 'Front and rear', kind: 'emergency', what: 'High beams in turn, rear turn signals and rear fogs opposite',
@@ -50,17 +47,17 @@ const PATTERNS = [
     { id: 'corners', name: 'Corner strobe', kind: 'emergency', what: 'All turn signals, front and rear corners crossed',
         frames: [f(120, 'indFL', 'indRR'), f(80), f(120, 'indFL', 'indRR'), f(180), f(120, 'indFR', 'indRL'), f(80), f(120, 'indFR', 'indRL'), f(180)] },
     { id: 'chase', name: 'Chase', kind: 'show', what: 'Around the car, corner to corner',
-        frames: [f(180, 'indFL', 'fogL'), f(180, 'indFR', 'fogR'), f(180, 'indSR', 'indRR'), f(180, 'indRL', 'indSL')] },
+        frames: [f(180, 'indFL', 'highL'), f(180, 'indFR', 'highR'), f(180, 'indSR', 'indRR'), f(180, 'indRL', 'indSL')] },
     { id: 'sweep', name: 'Sweep', kind: 'show', what: 'Across the front and back, out and back',
-        frames: [f(140, 'indFL', 'rfogL'), f(140, 'fogL', 'revL'), f(140, 'highL'), f(140, 'highR'),
-            f(140, 'fogR', 'revR'), f(140, 'indFR', 'rfogR'), f(140, 'fogR', 'revR'), f(140, 'highR'), f(140, 'highL'), f(140, 'fogL', 'revL')] },
+        frames: [f(140, 'indFL', 'rfogL'), f(140, 'revL'), f(140, 'highL'), f(140, 'highR'),
+            f(140, 'revR'), f(140, 'indFR', 'rfogR'), f(140, 'revR'), f(140, 'highR'), f(140, 'highL'), f(140, 'revL')] },
     { id: 'all', name: 'Everything', kind: 'show', what: 'Every lamp on, then every lamp off',
-        frames: [f(400, 'lowL', 'lowR', 'highL', 'highR', 'drlL', 'drlR', 'fogL', 'fogR', 'indFL', 'indFR', 'indSL', 'indSR', 'indRL', 'indRR',
+        frames: [f(400, 'highL', 'highR', 'indFL', 'indFR', 'indSL', 'indSR', 'indRL', 'indRR',
             'rfogL', 'rfogR', 'revL', 'revR'), f(400)] },
     // burst: each frame's lamps lit by their lamp functions all at once (both sides together), each for the frame's
     // time and then dark by itself - fast, where switching a dozen lamps one by one (~300 ms a request) can't be
-    { id: 'strobe', name: 'Strobe', kind: 'show', burst: true, what: 'Reversing, fog, low, high, daytime lights and turn signals, both sides, in quick turn',
-        frames: [f(150, 'revL', 'fogL', 'lowL', 'highL', 'drlL', 'indFL', 'indFR'), f(150)] },
+    { id: 'strobe', name: 'Strobe', kind: 'show', burst: true, what: 'Reversing lights, high beams and turn signals, both sides, in quick turn',
+        frames: [f(150, 'revL', 'highL', 'indFL', 'indFR'), f(150)] },
     // a whole side's turn signals (front, mirror, rear) by its own lamp function: one request a flash, dark again by
     // itself - the fastest side to side the car allows (it takes one request at a time, ~300 ms each)
     { id: 'sides', name: 'Side to side', kind: 'show', burst: true, what: 'A whole side\'s turn signals: two flashes left, two right',
@@ -70,7 +67,7 @@ const PATTERNS = [
     { id: 'revsides', name: 'Reverse side to side', kind: 'show', what: 'Reversing lights: two blinks left, two right',
         frames: [f(120, 'revL'), f(100), f(120, 'revL'), f(250), f(120, 'revR'), f(100), f(120, 'revR'), f(250)] },
     { id: 'blink', name: 'Blink', kind: 'show', what: 'Headlights and tail lights dark, then a flash, like a wink',
-        frames: [f(600, 'drlL', 'drlR'), f(150), f(600, 'drlL', 'drlR'), f(150), f(120, 'highL', 'highR'), f(120), f(120, 'highL', 'highR'), f(500)] },
+        frames: [f(120, 'highL', 'highR'), f(120), f(120, 'highL', 'highR'), f(500)] },
 ];
 /* The car's own flashing modes (found by the lamp check's flash tries on a G05): one request and the unit flashes by
  * itself - both sides together even when one headlight module is asked (seen on the car), so light shows only - a headlight (L / R: its module) in panic mode or alarm flashing for whole seconds, the reversing lights'
@@ -79,8 +76,6 @@ const PATTERNS = [
 const PANIC = FLM_FLASH.panic, ALARM = FLM_FLASH.alarm, REVFLASH = BDC_FLASH.reversing;
 const m = (ms, ...act) => ({ ms, on: [], act });
 PATTERNS.push(
-    { id: 'hstrobe', name: 'Headlight strobe', kind: 'show', modes: true, what: 'Both headlights in their panic flashing, the reversing lights flashing',
-        frames: [m(1800, ['L', PANIC, 2], ['R', PANIC, 2], ['fn', REVFLASH, 2000])] },
     { id: 'revflash', name: 'Reverse flash', kind: 'show', modes: true, what: 'The reversing lights\' own flashing (both sides)',
         frames: [m(1800, ['fn', REVFLASH, 2000])] },
 );

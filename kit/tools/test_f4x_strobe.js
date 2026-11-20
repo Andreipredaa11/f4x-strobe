@@ -26,7 +26,7 @@ function check(name, fn) { try { fn(); passed++; console.log('ok   ' + name); } 
 /* the body controller and headlight modules: answer like the SGBDs say, with knobs. The body controller takes ONE
    output layout (bdc.layout, the id from lamps.js LAYOUTS; null: none): a request of another length is "wrong length",
    of the same length "out of range" - as the G05 answered the first two */
-const sent = [];
+const sent = [], everSent = [];
 const bdc = { refuseOut: new Set(), noRelease: false, releaseNrc: 0x31, session: 0x01, layout: '03 E A 00', flm: true,
     gen: 'g05',                           // the generation's lamp output DIDs it answers: 'g05' E3B5 / E3B9, 'bdc' 4501 / 4500
     refuseFn: new Set(),                  // light function codes it refuses (out of range)
@@ -86,14 +86,14 @@ class FakeDiag extends EventEmitter {
     init() {}
     // straight to the transport (the speed test's pipelined part): the reply comes as a frame
     async send(target, sid, data) {
-        sent.push([target, sid].concat(data));
+        sent.push([target, sid].concat(data)); everSent.push([target, sid].concat(data));
         const u = answer(target, sid, data);
         if (u) setImmediate(() => this.emit('frame', { ecu: target, uds: u }));
         return 'NO_ERROR';
     }
     async physical(target, sid, data, timeoutMs, accept) {
         if (bdc.latencyMs) await new Promise((r) => simST(r, bdc.latencyMs));      // (the head unit's transport: ~300 ms a request on a G05)
-        sent.push([target, sid].concat(data));
+        sent.push([target, sid].concat(data)); everSent.push([target, sid].concat(data));
         const u = answer(target, sid, data);
         await new Promise((r) => setImmediate(r));
         return u && (!accept || accept(u)) ? u : null;
@@ -132,7 +132,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         assert.strictEqual(hexs(L.req.release(L.BY_ID.highR)), '2F E3 B5 00 08');
         assert.strictEqual(hexs(L.req.fn(0x05, 300)), '2E D5 42 00 05 00 1E');
         assert.strictEqual(hexs(L.req.lv(0x0F, 1)), '2E D6 DC 00 0F 01');
-        assert(L.BY_ID.highL.flm.ecu === 0x43 && L.BY_ID.highR.flm.ecu === 0x44, 'a headlight module each side');
+        assert(L.LAMPS.every((l) => !l.flm) && !L.BY_ID.lowL && !L.BY_ID.fogL, 'no low beams, no front fogs, no headlight module ways');
+        [[0x2E, 0xD6, 0xDC, 0x00, 0x0F, 0x01], [0x10, 0x03], [0x3E, 0x00], [0x31, 0x01, 0xA5, 0x43, 0xFF]].forEach((b) => {
+            assert.throws(() => L.check(0x43, b), /not allowed/, '43: ' + hexs(b)); assert.throws(() => L.check(0x44, b), /not allowed/, '44: ' + hexs(b));
+        });
+        [0x03, 0x04, 0x08, 0x09, 0x0A].forEach((c) => assert.throws(() => L.check(0x40, [0x2E, 0xD5, 0x42, 0x00, c, 0x00, 0x0A]), /not allowed/, 'function ' + c));
     });
     check('emergency patterns never take over low beams, daytime, tail, plate or brake lights', () => {
         P.PATTERNS.filter((p) => p.kind === 'emergency').forEach((p) => assert(P.safeForDriving(p), p.id));
@@ -194,7 +198,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         assert.deepStrictEqual(probe.slice(0, 3), ['2F E3 B5 1E 01', '2F E3 B5 03 1E 01', '2F E3 B5 03 1E 01 00'], probe.join(' | '));
         assert(saved._layout === '03 E A 00' && saved._probed.length === 3 && saved._probed[1].why === 'wrong length' && saved._probed[2].why === 'ok', JSON.stringify(saved._probed));
         assert(L.LAMPS.filter((l) => !l.outDark && !l.usual).every((l) => saved[l.id].ok && saved[l.id].how === 'out' && saved[l.id].back === 'ok'), 'every lamp by its own output, and given back');
-        assert(['lowL', 'lowR', 'drlL', 'drlR'].every((id) => saved[id].ok === false) && !sent.some((x) => x[0] === 0x40 && /^2F E3 B5 03 0[1-4] 01/.test(hexs(x.slice(1)))),
+        assert(['drlL', 'drlR'].every((id) => saved[id].ok === false) && !sent.some((x) => x[0] === 0x40 && /^2F E3 B5 03 0[1-4] 01/.test(hexs(x.slice(1)))),
             'low beams and daytime lights never by the body controller (no headlight module here: left out)');
         assert(saved.indSL.ok === false && saved.indSL.fn === true, 'the mirror repeaters: not by the body controller');
         assert(app.link.releaseForm === '00 E' && app.link.releaseTried[0].id === 'A=40', JSON.stringify(app.link.releaseTried));
@@ -244,7 +248,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     for (let i = 0; i < 400 && app.back.running; i++) await sleep(5);
     const gb = sent.map((x) => hexs(x.slice(1)));
     check('Give lamps back: every output given back, stuck marks cleared, session ended', () => {
-        assert(app.link.stuck.size === 0 && /24 given back, 0 refused/.test(app.back.done), app.back.done);
+        assert(app.link.stuck.size === 0 && /20 given back, 0 refused/.test(app.back.done), app.back.done);
         const nr = gb.filter((x) => x !== '22 E3 B9');
         assert(nr[0] === '10 03' && nr[nr.length - 1] === '10 01' && gb.includes('2F E3 B5 00 18') && gb[gb.length - 1] === '22 E3 B9', gb.join(' | '));
     });
@@ -256,7 +260,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     saved = await lampCheck();
     check('give-back refused, no time byte: found not a time; the fog light not given back (held dark); tail and plate never switched', () => {
         assert(saved._timer === null && /still on/.test(saved._timerTried.join(' ')), JSON.stringify(saved._timerTried));
-        assert(saved.fogL.ok && saved.fogL.back === 'conditions not correct' && !('tailL' in saved) && !('plate' in saved) && app.link.stuck.size === 0, JSON.stringify(saved.fogL) + ' stuck: ' + Array.from(app.link.stuck));
+        assert(saved.rfogL.ok && saved.rfogL.back === 'conditions not correct' && !('tailL' in saved) && !('plate' in saved) && app.link.stuck.size === 0, JSON.stringify(saved.rfogL) + ' stuck: ' + Array.from(app.link.stuck));
         assert(!('_blinkTries' in saved), 'no turn signal tries');
     });
     bdc.noRelease = false; bdc.releaseNrc = 0x31; bdc.state = {}; app.link.stuck.clear();
@@ -266,7 +270,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     saved = await lampCheck();
     check('the time byte found to be a time: unit measured, every lamp back by itself', () => {
         assert(saved._timer && saved._timer.unitMs === 10 || saved._timer.unitMs === 100, JSON.stringify(saved._timer) + ' ' + saved._timerTried);
-        assert(saved.fogL.back === 'by itself' && saved.revL.back === 'by itself' && app.link.stuck.size === 0, JSON.stringify(saved.fogL) + ' stuck: ' + Array.from(app.link.stuck));
+        assert(saved.rfogL.back === 'by itself' && saved.revL.back === 'by itself' && app.link.stuck.size === 0, JSON.stringify(saved.rfogL) + ' stuck: ' + Array.from(app.link.stuck));
     });
     bdc.noRelease = true; bdc.releaseNrc = 0x22;            // (and the give-back request refused, as on the G05)
     bdc.carOn = new Set([0x1E, 0x0B, 0x14]);               // the left reversing and fog lights (and the tail lights) on before the show
@@ -284,7 +288,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const strobe = await run(700);
     check('strobe: the lamp functions sent all at once each flash (both sides, the turn signals a side each), nothing switched off', () => {
         const fns = strobe.filter((x) => /^2E D5 42 00 /.test(x)).map((x) => x.slice(12, 14));
-        ['0F', '08', '03', '05', '04', '06', '07'].forEach((c) => assert(fns.includes(c), c + ' in ' + strobe.join(' | ')));
+        ['0F', '05', '06', '07'].forEach((c) => assert(fns.includes(c), c + ' in ' + strobe.join(' | ')));
         assert(!strobe.some((x) => /^2F E3 B5 03 (0D|0E|1E|1F|0B|0C) 00 /.test(x)) || true);
     });
     S.pattern = 'wigwag'; bdc.carOn = new Set();
@@ -332,19 +336,26 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     S.speed = '1';
 
     // the lamp check: identification first (reads only), then each light function once
-    bdc.refuseFn = new Set([0x09, 0x0A]);                 // no cornering lights on this car
+    bdc.refuseFn = new Set([0x10, 0x11]);                 // no parking light functions on this car
     sent.length = 0;
     saved = await lampCheck();
-    check('lamp check: body controller identified, light functions tried, cornering lights found missing', () => {
+    check('lamp check: body controller identified, light functions tried, parking lights found missing; never low beam, fog or cornering', () => {
         assert(saved._car && saved._car.gen === 'g05' && saved._car.fn === true && saved._car.ids['40'] === '004001', JSON.stringify(saved._car));
-        assert(saved._funcs.high === 'ok' && saved._funcs.cornL === 'out of range' && saved._funcs.cornR === 'out of range', JSON.stringify(saved._funcs));
+        assert(saved._funcs.high === 'ok' && saved._funcs.parkL === 'out of range' && saved._funcs.parkR === 'out of range' && !('cornL' in saved._funcs) && !('fog' in saved._funcs), JSON.stringify(saved._funcs));
+        assert(!sent.some((x) => x[0] === 0x40 && /^2E D5 42 00 0[3489A] /.test(hexs(x.slice(1)))), 'no low beam, daytime, fog or cornering function');
         const first = sent.map((x) => hexs(x.slice(1)));
         assert(first.indexOf('22 F1 50') < first.indexOf('2E D5 42 00 05 00 3C'), 'identified before the first flash');
     });
     S.pattern = 'police';
     const pol = await run(900);
-    check('police without cornering lights: the high beam instead, the cornering lights never asked', () => {
-        assert(pol.includes('2E D5 42 00 05 00 07') && !pol.some((x) => /^2E D5 42 00 0[9A] /.test(x)), pol.join(' | '));
+    check('police: high beam flashes, then both sides\' turn signals; nothing else', () => {
+        assert(pol.includes('2E D5 42 00 05 00 07') && pol.includes('2E D5 42 00 06 00 0A') && pol.includes('2E D5 42 00 07 00 0A'), pol.join(' | '));
+        assert(pol.filter((x) => /^2E /.test(x)).every((x) => /^2E D5 42 00 0[567] /.test(x)), pol.join(' | '));
+    });
+    S.pattern = 'every';
+    const ev = await run(2500);
+    check('every light in turn: the parking lights (refused in the check) left out', () => {
+        assert(ev.some((x) => /^2E D5 42 00 0F /.test(x)) && !ev.some((x) => /^2E D5 42 00 1[01] /.test(x)), ev.join(' | '));
     });
     await loops.MAIN();
     check('pages draw with the car and function results', () => assert(!warns.some((w) => /TypeError|ReferenceError|is not a function/.test(w)), warns.join(' | ')));
@@ -369,29 +380,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     fs.unlinkSync(path.join(dir, 'lamp-check.json'));
     Object.keys(saved).forEach((k) => delete saved[k]);
 
-    // a body controller that takes no layout: the front lamps by their headlight module (one a side), the turn
-    // signals by their side's own lamp function, the rest left out
+    // a body controller that takes no layout: no headlight module to fall back on (never written): the high beams and
+    // turn signals by their lamp functions where those are a side's own, nothing to the headlights
     bdc.layout = null; bdc.flm = true; sent.length = 0;
     saved = await lampCheck();
-    check('no output layout: every layout tried and none kept; front lamps by their headlight module', () => {
+    check('no output layout: every layout tried and none kept; nothing ever sent to the headlight modules but a read', () => {
         assert(saved._layout === null && saved._probed.length === L.LAYOUTS.length, JSON.stringify(saved._probed));
-        ['lowL', 'lowR', 'highL', 'highR', 'drlL', 'drlR', 'indFL', 'indFR'].forEach((id) => assert(saved[id].ok && saved[id].how === 'flm', id + ' ' + JSON.stringify(saved[id])));
-        assert(saved.indRL.ok === false && saved.indRL.fn === true && !('tailL' in saved), JSON.stringify(saved.indRL));
-        assert(sent.some((x) => x[0] === 0x43 && hexs(x.slice(1)) === '2E D6 DC 00 0F 02') && sent.some((x) => x[0] === 0x44 && hexs(x.slice(1)) === '2E D6 DC 00 0F 00'), 'high beam on and off in each module');
-    });
-    sent.length = 0;
-    during = await run(900);
-    check('wig-wag by the headlight modules: left module, then right, each one switched off for the other\'s turn', () => {
-        const l = sent.filter((x) => x[0] === 0x43).map((x) => hexs(x.slice(1))), r = sent.filter((x) => x[0] === 0x44).map((x) => hexs(x.slice(1)));
-        assert(l[0] === '10 03' && l.indexOf('2E D6 DC 00 0F 01') > 0 && l.indexOf('2E D6 DC 00 0F 00') > l.indexOf('2E D6 DC 00 0F 01'), l.join(' | '));
-        assert(r.indexOf('2E D6 DC 00 0F 01') > 0 && r[r.length - 1] === '10 01' && l[l.length - 1] === '10 01', r.join(' | '));
-        assert(!sent.some((x) => x[0] === 0x40 && x[1] === 0x2F && x.length > 5), 'no body controller output request');
+        assert(saved.highL.ok === false && saved.highL.fn === true, JSON.stringify(saved.highL));
+        assert(sent.filter((x) => x[0] === 0x43 || x[0] === 0x44).every((x) => hexs(x.slice(1)) === '22 F1 50'), 'headlight modules: read only');
     });
     S.pattern = 'corners';
     during = await run(700);
-    check('corner strobe: front turn signals in their headlights; the rear ones (not lit by their outputs) left out', () => {
-        assert(sent.some((x) => x[0] === 0x43 && hexs(x.slice(1)) === '2E D6 DC 00 49 01'), during.join(' | '));
-        assert(!during.some((x) => /^2E D5 42 /.test(x)) && !during.some((x) => /^2F E3 B5 03 (20|21) /.test(x)));
+    check('corner strobe: turn signals by their side\'s lamp function; nothing to the headlight modules', () => {
+        assert(during.some((x) => /^2E D5 42 00 06 /.test(x)) && !sent.some((x) => x[0] === 0x43 || x[0] === 0x44), during.join(' | '));
     });
     S.pattern = 'wigwag'; bdc.layout = '03 E A 00';
     await loops.MAIN();
@@ -415,7 +416,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     for (const id of ['wigwag', 'double']) {
         S.pattern = id;
         const r = await run(5000);
-        const hb = sent.filter((x) => (x[0] === 0x43 || x[0] === 0x44) && x[1] === 0x2E && x[5] === 0x0F).map((x) => (x[0] === 0x43 ? 'L' : 'R') + (x[6] ? '1' : '0'));
+        const hb = sent.filter((x) => x[0] === 0x40 && x[1] === 0x2F && x[4] === 0x03 && (x[5] === 0x07 || x[5] === 0x08)).map((x) => (x[5] === 0x07 ? 'L' : 'R') + (x[6] ? '1' : '0'));
         const lit = new Set(); let both = false;
         hb.forEach((e) => { if (e[1] === '1') lit.add(e[0]); else lit.delete(e[0]); if (lit.size > 1) both = true; });
         check(id + ' at 300 ms a request: one high beam at a time, left and right in turn, no give-back requests, all dark at the end', () => {
@@ -443,8 +444,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         assert(saved._speed && saved._speed.pipe.sent === 8 && saved._speed.pipe.taken === 8 && saved._speed.pipe.answered === 8, JSON.stringify(saved._speed));
         assert(saved._gateway && Array.isArray(saved._gateway.found) && Array.isArray(saved._gateway.interfaces), JSON.stringify(saved._gateway));
     });
-    check('the check\'s flash tries: three headlight flashing modes in the left headlight, two body controller flashing functions', () => {
-        assert(saved._flashTries.length === 5, JSON.stringify(saved._flashTries));
+    check('the check\'s flash tries: only the two body controller flashing functions (no headlight modes)', () => {
+        assert(saved._flashTries.length === 2, JSON.stringify(saved._flashTries));
     });
     check('the G05 as answered: every pattern lights lamps', () => Object.keys(g05).forEach((id) => assert(g05[id].lamps > 0 && !g05[id].error, id + ' ' + JSON.stringify(g05[id]))));
     S.pattern = 'wigwag';
@@ -509,7 +510,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     let wd = await run(900);
     check('direct link (HSFZ): connected with the gateway\'s VIN, the lamps go that way and not through the head unit', () => {
         assert(ok1 && app.direct.proto === 'hsfz' && app.direct.vin === 'WBA00000000000045', app.direct.error);
-        assert(viaDirect.some((x) => /^43 2E D6 DC 00 0F 01/.test(x)) && viaDirect.some((x) => /^40 10 03/.test(x)), viaDirect.join(' | '));
+        assert(viaDirect.some((x) => /^40 2F E3 B5 03 07 01/.test(x)) && viaDirect.some((x) => /^40 10 03/.test(x)), viaDirect.join(' | '));
         assert(!sent.some((x) => x[1] === 0x2E || x[1] === 0x2F), 'nothing through the head unit: ' + wd.join(' | '));
     });
     app.direct.close(); srv.close(); await sleep(50);
@@ -522,10 +523,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     wd = await run(900);
     check('direct link (DoIP): routing activation (the tester address the gateway takes), the lamps that way', () => {
         assert(ok2 && app.direct.proto === 'doip' && app.direct.tester === 0x0E80, app.direct.error + ' ' + app.direct.tester);
-        assert(viaDirect.some((x) => /^43 2E D6 DC 00 0F 01/.test(x)), viaDirect.join(' | '));
+        assert(viaDirect.some((x) => /^40 2F E3 B5 03 07 01/.test(x)), viaDirect.join(' | '));
     });
     app.direct.close(); srv.close();
 
+    check('the whole run: nothing ever written to the headlight modules, no low beam, daytime, fog or cornering function', () => {
+        const hl = everSent.filter((x) => (x[0] === 0x43 || x[0] === 0x44) && hexs(x.slice(1)) !== '22 F1 50');
+        assert(!hl.length, hl.map((x) => hexs(x)).slice(0, 5).join(' | '));
+        assert(!everSent.some((x) => x[0] === 0x40 && /^2E D5 42 00 0[3489A] /.test(hexs(x.slice(1)))));
+        assert(!everSent.some((x) => x[0] === 0x40 && /^2F (E3 B5|45 01) 03 0[1-4B-C] 01/.test(hexs(x.slice(1)))), 'no low beam, daytime or front fog output switched on');
+    });
     console.log(passed + ' checks passed');
     process.exit(process.exitCode || 0);
 })().catch((e) => { console.error(e); process.exit(1); });

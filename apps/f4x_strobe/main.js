@@ -208,7 +208,6 @@ mgu.run({
                 // output requests and nothing lights), 2. its own output (body controller), 3. its lamp function
                 let r = { ok: false, nrc: null }, how = null;
                 const tried = [];
-                if (l.flm) { link.how[l.id] = 'flm'; r = await link.set(l.id, true, null, CHECK_ON_MS); tried.push('headlight: ' + why(r)); if (r.ok) how = 'flm'; }
                 if (!how && link.layout && !l.outDark && !l.usual) { link.how[l.id] = 'out'; r = await link.set(l.id, true, null, CHECK_ON_MS); tried.push('output: ' + why(r)); if (r.ok) how = 'out'; }
                 let fnOk = false;
                 if (!how) { const fr = await link.fn(l.id, CHECK_ON_MS); fnOk = fr.ok; if (FN[l.id]) tried.push('function: ' + why(fr)); }
@@ -232,16 +231,13 @@ mgu.run({
             // the car's own flashing modes, A to E, 2.5 s each (one request, the unit flashes by itself): the driver says
             // which flashed - a fast strobe needs one of them (the car takes ~3 requests a second)
             const TRIES = [
-                { what: 'left headlight, Panik-Modus', ecu: FLM_L, lv: FLM_FLASH.panic, lamps: ['highL', 'lowL'] },
-                { what: 'left headlight, alarm flashing', ecu: FLM_L, lv: FLM_FLASH.alarm, lamps: ['highL', 'lowL'] },
-                { what: 'left headlight, hold-up alarm', ecu: FLM_L, lv: FLM_FLASH.holdup, lamps: ['highL', 'lowL'] },
                 { what: 'body controller, special flashing', fn: BDC_FLASH.special, lamps: ['indFL', 'indFR', 'indRL', 'indRR'] },
                 { what: 'body controller, reversing flash', fn: BDC_FLASH.reversing, lamps: ['revL', 'revR'] },
             ];
             checked._flashTries = [];
             for (let i = 0; i < TRIES.length && check.running; i++) {
-                const tr = TRIES[i], L = 'ABCDE'[i];
-                check.at = -1; check.step = 'Flash try ' + L + ' of A-E: ' + tr.what + ' (did it flash?)'; lit = new Set(tr.lamps);
+                const tr = TRIES[i], L = 'AB'[i];
+                check.at = -1; check.step = 'Flash try ' + L + ' of A-B: ' + tr.what + ' (did it flash?)'; lit = new Set(tr.lamps);
                 const r = tr.ecu ? await link.lvTry(tr.ecu, tr.lv, 2) : await link.flashFn(tr.fn, 2500);
                 checked._flashTries.push(L + ' ' + why(r));
                 await new Promise((res) => setTimeout(res, 2500));

@@ -14,6 +14,13 @@ The app only runs when the car reports that it's standing still. A pattern stops
 every run stops by itself after the time limit (1 to 30 minutes, 5 by default). Flashing high beams, strobes and
 wig-wags on a public road is illegal in most countries, and they can be mistaken for an emergency vehicle.
 
+## Never touched
+
+This car has **adaptive headlights** and **no front fog lights**, so the app never switches the low beams, daytime
+lights, cornering lights or front fogs. It never writes anything to the headlight modules (0x43 / 0x44), where the
+headlight motors are: no session, no light function, no lamp test, only an identification read. `check()` refuses
+all of these before they can be sent, and the tests check every request of a full run.
+
 ## Patterns
 
 **Strobes** flash the body controller's own light functions. The car does one flash per request and switches the
@@ -24,8 +31,8 @@ the head unit stops.
 |---|---|
 | High beam strobe | High beams, as fast as the car takes requests |
 | Triple flash | Three high beam flashes, then a pause |
-| Police | Cornering lights: three left, three right (high beams on cars without cornering lights) |
-| High beam / fogs | High beams and front fogs in turn |
+| Police | Three high beam flashes, then all turn signals twice |
+| High beam / turn signals | High beams and all turn signals in turn |
 | Indicator wig-wag | A whole side's turn signals: two left, two right |
 | Front and back | High beams, then rear fog and reversing lights |
 | Rear strobe | Rear fog and reversing lights in turn |
@@ -44,8 +51,7 @@ Run it once, parked. It takes about a minute. Watch the car or film it.
 
 1. **Identifies** the body controller (reads only): which generation answers its lamp status (`BDC_G05`, or the
    older `BDC` generation), whether it has light functions, and each unit's SGBD index.
-2. **Light functions**: each one flashed once. Any that are refused, like cornering lights on a car without them,
-   are left out of the strobes, or replaced by the pattern's fallback.
+2. **Light functions**: each one flashed once. Any that are refused are left out of the strobes.
 3. **Lamp outputs** (Light Show's check): the output request layout, the time byte, a speed test, then each lamp
    in turn.
 
@@ -59,9 +65,9 @@ The results are saved and shown on the Strobe page (`Car: ...`) and the Lamp che
 |---|---|---|
 | Body controller 0x40 | `10 03`, `10 01`, `3E 00` | Extended session, tester present every 2 s, default session at stop |
 | | `22 F150`, `22 D542`, `22 E3B9`, `22 4500` | Identification, light functions, lamp output status (reads) |
-| | `2E D542 00 <fn> <time, 10 ms>` | Light function for a time (max 5 s). Never brake light or emergency stop signal |
-| | `2F E3B5 ...` or `2F 4501 ...` | One lamp output on / off / back to the car (BDC_G05 or older BDC). Never brake, tail or plate lights on/off |
-| Headlight modules 0x43 / 0x44 | `22 F150`, `2E D6DC ...` | Identification; FLM02 light function (G05 headlights; F4x headlights will likely refuse) |
+| | `2E D542 00 <fn> <time, 10 ms>` | Light function for a time (max 5 s): high beam, turn signals, rear fog, reversing, parking lights only |
+| | `2F E3B5 ...` or `2F 4501 ...` | One lamp output on / off / back to the car (BDC_G05 or older BDC). Never low beam, daytime, front fog, brake, tail or plate lights on/off |
+| Headlight modules 0x43 / 0x44 | `22 F150` | Identification read only. Nothing is ever written |
 
 ## Tests
 
